@@ -6,3 +6,8 @@ node_modules/
 
 # Local data cache & uploads
 data/
+
+# Other patterns
+*.pdf
+*_extracted.txt
+.DS_Store
