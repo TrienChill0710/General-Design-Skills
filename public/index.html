@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slack Summarizer - Tóm tắt hội thoại thông minh</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Styling -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <i class="fa-brands fa-slack logo-icon"></i>
+          <span>Slack Summarizer</span>
+        </div>
+        <span class="badge badge-ai">Gemini AI</span>
+      </div>
+
+      <!-- Settings & Sync Panel Button -->
+      <div class="sidebar-actions">
+        <button id="btn-open-config" class="btn btn-secondary">
+          <i class="fa-solid fa-cog"></i> Cấu hình hệ thống
+        </button>
+      </div>
+
+      <!-- Import Panel -->
+      <div class="sidebar-section">
+        <h3><i class="fa-solid fa-file-import"></i> Nạp dữ liệu</h3>
+        <div class="import-options">
+          <!-- Zip Upload -->
+          <div class="upload-box" id="upload-box">
+            <input type="file" id="zip-input" accept=".zip" style="display: none;">
+            <label for="zip-input" class="upload-label">
+              <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+              <span>Tải lên Slack Export ZIP</span>
+            </label>
+            <div id="upload-status" class="status-text hidden"></div>
+          </div>
+          <!-- Live API Sync -->
+          <button id="btn-sync-api" class="btn btn-primary btn-block">
+            <i class="fa-solid fa-arrows-rotate"></i> Đồng bộ qua Slack API
+          </button>
+        </div>
+      </div>
+
+      <!-- Channels List -->
+      <div class="sidebar-section list-section">
+        <div class="section-header-row">
+          <h3><i class="fa-solid fa-hashtag"></i> Danh sách kênh</h3>
+          <span class="count-badge" id="channels-count">0</span>
+        </div>
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="channel-search" placeholder="Tìm kiếm kênh...">
+        </div>
+        <ul class="channels-list" id="channels-list">
+          <div class="empty-state-list">
+            Chưa có kênh nào. Hãy nạp dữ liệu ở trên!
+          </div>
+        </ul>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="sidebar-footer">
+        <div class="user-status-dot connected"></div>
+        <span>Đã kết nối máy chủ</span>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content" id="main-content">
+      
+      <!-- Welcome State -->
+      <div class="welcome-container" id="welcome-view">
+        <div class="welcome-card">
+          <div class="welcome-icon-wrapper">
+            <i class="fa-brands fa-slack"></i>
+            <i class="fa-solid fa-arrow-right"></i>
+            <i class="fa-solid fa-brain"></i>
+          </div>
+          <h1>Chào mừng bạn đến với Slack Summarizer</h1>
+          <p>Trợ lý ảo giúp bạn đọc, lọc, tóm tắt và hỏi đáp các thông tin từ các kênh Slack một cách thông minh.</p>
+          <div class="welcome-steps">
+            <div class="step-card">
+              <div class="step-num">1</div>
+              <h4>Cấu hình API Key</h4>
+              <p>Mở <strong>Cấu hình hệ thống</strong> để thiết lập Gemini API Key nhằm kích hoạt tính năng tóm tắt bằng AI.</p>
+            </div>
+            <div class="step-card">
+              <div class="step-num">2</div>
+              <h4>Nạp dữ liệu Slack</h4>
+              <p>Đồng bộ trực tiếp qua Slack API hoặc tải lên file ZIP export từ Workspace của bạn.</p>
+            </div>
+            <div class="step-card">
+              <div class="step-num">3</div>
+              <h4>Chọn kênh & Tóm tắt</h4>
+              <p>Chọn kênh trò chuyện, chọn khoảng thời gian và xem kết quả phân tích tức thì từ AI.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard View (Hidden by default) -->
+      <div class="dashboard-container hidden" id="dashboard-view">
+        
+        <!-- Channel Header -->
+        <header class="channel-header">
+          <div class="channel-info-meta">
+            <h2 id="current-channel-name"># general</h2>
+            <p id="current-channel-purpose">Mô tả kênh...</p>
+          </div>
+          
+          <div class="channel-filters">
+            <div class="date-picker-group">
+              <div class="date-input-wrapper">
+                <label>Từ ngày</label>
+                <input type="date" id="filter-start-date">
+              </div>
+              <div class="date-input-wrapper">
+                <label>Đến ngày</label>
+                <input type="date" id="filter-end-date">
+              </div>
+            </div>
+            <button id="btn-generate-summary" class="btn btn-accent">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Tóm tắt bằng AI
+            </button>
+          </div>
+        </header>
+
+        <!-- Summary Grid (Overview, Action Items, Decisions, Topics) -->
+        <div class="dashboard-grid">
+          
+          <!-- LEFT / COLUMN 1: AI Summarization Results -->
+          <section class="summary-section">
+            
+            <!-- Summary Loading -->
+            <div class="summary-loader hidden" id="summary-loader">
+              <div class="sparkles-loader">
+                <i class="fa-solid fa-wand-magic-sparkles magic-icon animate-pulse"></i>
+                <div class="spinner"></div>
+              </div>
+              <h3>Gemini đang phân tích cuộc hội thoại...</h3>
+              <p>Quá trình này có thể mất vài giây tùy thuộc vào số lượng tin nhắn.</p>
+            </div>
+
+            <!-- Summary Content -->
+            <div class="summary-content-wrapper" id="summary-content">
+              
+              <!-- Placeholder State -->
+              <div class="empty-summary-state" id="summary-placeholder">
+                <i class="fa-solid fa-comment-nodes"></i>
+                <h3>Sẵn sàng phân tích</h3>
+                <p>Chọn khoảng thời gian hoặc bấm nút <strong>Tóm tắt bằng AI</strong> ở trên để bắt đầu phân tích cuộc trò chuyện.</p>
+              </div>
+
+              <!-- Real Content -->
+              <div class="summary-real-content hidden" id="summary-real-content">
+                
+                <!-- Overview Card -->
+                <div class="content-card overview-card">
+                  <div class="card-header">
+                    <i class="fa-solid fa-align-left card-icon"></i>
+                    <h3>Tóm tắt tổng quan</h3>
+                  </div>
+                  <p id="summary-overview-text">Nội dung tóm tắt...</p>
+                </div>
+
+                <!-- Two-Column Grid: Action Items & Decisions -->
+                <div class="two-col-grid">
+                  <!-- Action Items -->
+                  <div class="content-card action-card">
+                    <div class="card-header">
+                      <i class="fa-solid fa-list-check card-icon"></i>
+                      <h3>Việc cần làm (Action Items)</h3>
+                    </div>
+                    <ul class="action-list" id="summary-action-list">
+                      <!-- Action items list -->
+                    </ul>
+                  </div>
+
+                  <!-- Key Decisions -->
+                  <div class="content-card decision-card">
+                    <div class="card-header">
+                      <i class="fa-solid fa-gavel card-icon"></i>
+                      <h3>Quyết định đã thông qua</h3>
+                    </div>
+                    <ul class="decision-list" id="summary-decision-list">
+                      <!-- Decisions list -->
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Discussion Topics -->
+                <div class="content-card topics-card">
+                  <div class="card-header">
+                    <i class="fa-solid fa-comments card-icon"></i>
+                    <h3>Chủ đề thảo luận chi tiết</h3>
+                  </div>
+                  <div class="topics-accordion" id="summary-topics-accordion">
+                    <!-- Topics accordion -->
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+          <!-- RIGHT / COLUMN 2: Original Chat & Q&A Pane -->
+          <aside class="interaction-pane">
+            
+            <!-- Tab Buttons -->
+            <div class="pane-tabs">
+              <button class="tab-btn active" data-tab="tab-messages">
+                <i class="fa-solid fa-message"></i> Tin nhắn gốc
+              </button>
+              <button class="tab-btn" data-tab="tab-chat">
+                <i class="fa-solid fa-robot"></i> Hỏi đáp AI (Chat)
+              </button>
+            </div>
+
+            <!-- Tab Content: Messages Viewer -->
+            <div class="tab-content active" id="tab-messages">
+              <div class="messages-viewer">
+                <div class="messages-list" id="messages-list">
+                  <!-- Original messages list -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab Content: Chat Q&A -->
+            <div class="tab-content" id="tab-chat">
+              <div class="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                  <div class="chat-bubble assistant">
+                    Chào bạn! Tôi có thể trả lời mọi câu hỏi của bạn xoay quanh nội dung cuộc hội thoại trong kênh này. Hãy hỏi tôi bất cứ điều gì! (Ví dụ: "Ai là người chịu trách nhiệm sửa lỗi?", "Đã quyết định họp lúc mấy giờ?")
+                  </div>
+                </div>
+                <div class="chat-input-area">
+                  <input type="text" id="chat-input" placeholder="Hỏi về cuộc trò chuyện này...">
+                  <button id="btn-chat-send" class="btn btn-accent">
+                    <i class="fa-solid fa-paper-plane"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </aside>
+
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- CONFIG MODAL -->
+  <div class="modal-backdrop hidden" id="config-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-sliders"></i> Cấu hình hệ thống</h2>
+        <button class="btn-close-modal" id="btn-close-config"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="config-form">
+          <div class="form-group">
+            <label for="config-gemini-key">
+              <span>Gemini API Key</span>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" class="form-link">Lấy API Key tại đây <i class="fa-solid fa-external-link"></i></a>
+            </label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-key input-icon"></i>
+              <input type="password" id="config-gemini-key" placeholder="Nhập Gemini API Key của bạn...">
+            </div>
+            <p class="input-tip">Dùng để kích hoạt tính năng tóm tắt bằng mô hình AI Gemini.</p>
+          </div>
+
+          <div class="form-group">
+            <label for="config-slack-token">
+              <span>Slack Token (Bot/User OAuth Token)</span>
+            </label>
+            <div class="input-with-icon">
+              <i class="fa-brands fa-slack input-icon"></i>
+              <input type="password" id="config-slack-token" placeholder="xoxb-... hoặc xoxp-...">
+            </div>
+            <p class="input-tip">Token kết nối trực tiếp với workspace của bạn để tự động đồng bộ tin nhắn.</p>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-config">Hủy bỏ</button>
+            <button type="submit" class="btn btn-accent">Lưu cấu hình</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION CONTAINER -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>

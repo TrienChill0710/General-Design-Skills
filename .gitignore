@@ -1,0 +1,8 @@
+# Dependency directory
+node_modules/
+
+# Local configuration / secrets (CRITICAL: Do not push to git)
+.env
+
+# Local data cache & uploads
+data/
