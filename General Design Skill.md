@@ -81,6 +81,31 @@ Mọi giao diện chất lượng cao đều được xây dựng chặt chẽ t
 * **Touch Target (Vùng chạm di động):** Vùng tương tác thực tế tối thiểu đạt **44x44pt (iOS)** hoặc **48x48dp (Android)**.
 * **Độ phân giải cơ sở:** Thiết kế trên Points: **375x812 pt** hoặc **390x844 pt**, sử dụng phông chữ SF Pro (iOS).
 
+### 8. UI Polish, Surfaces & Motion (Quy chuẩn làm mịn, bề mặt & chuyển động giao diện)
+Các chi tiết nhỏ khi kết hợp lại sẽ quyết định mức độ hoàn thiện (polished) của sản phẩm. Khi đánh giá hoặc thiết kế giao diện, cần tuân thủ bộ quy chuẩn sau:
+* **Bo góc đồng tâm (Concentric Border Radius):** Khi các phần tử bo góc lồng vào nhau, góc bo bên ngoài ($outerRadius$) phải bằng góc bo bên trong ($innerRadius$) cộng với khoảng cách đệm ($padding$): $outerRadius = innerRadius + padding$. Mismatched radii (bo góc không khớp tỷ lệ) là lỗi phổ biến nhất khiến giao diện trông nghiệp dư. Chỉ khi padding quá lớn (> 24px) mới có thể chọn góc bo độc lập.
+* **Căn chỉnh thị giác hơn hình học (Optical over Geometric Alignment):**
+  * *Nút chứa Chữ + Icon:* Phần padding phía có icon phải nhỏ hơn phía có chữ 2px để tạo sự cân bằng trực quan. Công thức: $icon\_padding = text\_padding - 2px$.
+  * *Icon Tam giác (Nút Play):* Trọng tâm thị giác lệch về bên phải so với trọng tâm hình học của bounding box. Cần dịch chuyển nhẹ icon sang phải 2px để tạo cảm giác cân đối.
+  * *Icon không đối xứng:* Tinh chỉnh trực tiếp file SVG để cân bằng trọng lượng thị giác thay vì dùng padding/margin trong code.
+* **Bóng đổ thay thế viền cứng (Shadows Over Borders):** Đối với button, card và container, thay vì dùng viền cứng (`border: 1px solid`), hãy xếp chồng các lớp bóng đổ trong suốt (`box-shadow`) để tạo chiều sâu tự nhiên. Bóng đổ trong suốt sẽ tự động tương thích với mọi loại màu nền.
+  * *Công thức bóng đổ chuẩn (Light Mode):* Xếp chồng 3 lớp: `0px 0px 0px 1px rgba(0, 0, 0, 0.06)` (tạo viền mịn), `0px 1px 2px -1px rgba(0, 0, 0, 0.06)` (tạo độ nâng nhẹ), `0px 2px 4px 0px rgba(0, 0, 0, 0.04)` (tạo chiều sâu không gian).
+  * *Dark Mode:* Chỉ sử dụng một vòng viền mờ màu trắng để mô phỏng ánh sáng phản chiếu: `0 0 0 1px rgba(255, 255, 255, 0.08)`.
+* **Chuyển động có thể ngắt quãng (Interruptible Animations):** Luôn sử dụng **CSS Transitions** cho các tương tác của người dùng (hover, toggle, đóng/mở panel) vì chúng có thể thay đổi hướng di chuyển giữa chừng (interruptible) theo hành vi người dùng mà không bị giật. Chỉ dùng CSS Keyframes cho các hoạt họa chạy một lần (như màn hình chào, loading).
+* **Hoạt họa xuất hiện so le (Stagger Enter Animations):** Tránh làm chuyển động nguyên một container lớn. Hãy chia nội dung thành các cụm nhỏ (tiêu đề, mô tả, nút bấm) và cho xuất hiện so le với độ trễ từ **20ms - 50ms** (tối đa 100ms) để tạo chuyển động mềm mượt.
+* **Hoạt họa biến mất nhẹ nhàng (Subtle Exit Animations):** Hoạt họa biến mất (Exit) phải nhanh hơn và nhẹ hơn hoạt họa xuất hiện (Enter) để tránh tranh giành sự chú ý của người dùng. Dùng một độ lệch nhỏ (ví dụ `translateY(-12px)`) kết hợp mờ dần (`opacity`) và biến mất nhanh (150ms so với 300ms khi vào).
+* **Hoạt họa icon theo ngữ cảnh (Contextual Icon Animations):** Khi thay đổi trạng thái icon (như Play $\rightarrow$ Pause, Like $\rightarrow$ Liked), hãy kết hợp `opacity` ($0 \rightarrow 1$), `scale` ($0.25 \rightarrow 1$) và `filter: blur(4px \rightarrow 0px)`. Nếu sử dụng thư viện chuyển động, thiết lập thuộc tính *Spring* với `bounce: 0` để tránh nảy giật quá mức.
+* **Làm mịn phông chữ (Font Smoothing):** Áp dụng `-webkit-font-smoothing: antialiased` tại thẻ `html` (root) để chữ hiển thị mảnh và sắc nét hơn trên thiết bị macOS.
+* **Chữ số bảng biểu (Tabular Numbers):** Áp dụng `font-variant-numeric: tabular-nums` (hoặc lớp `tabular-nums` trong Tailwind) cho toàn bộ các số thay đổi động (bộ đếm, giá tiền, đồng hồ) để tất cả các chữ số có chiều rộng bằng nhau, ngăn chặn hiện tượng giật lắc giao diện (Layout Shift) khi số thay đổi.
+* **Ngắt dòng chữ thông minh (Text Wrapping):** Sử dụng `text-wrap: balance` cho các tiêu đề chính (dưới 6 dòng) để phân bổ đều số chữ trên các dòng. Sử dụng `text-wrap: pretty` cho các đoạn mô tả ngắn để tránh hiện tượng chữ cuối cùng bị rớt xuống dòng lẻ loi (chữ mồ côi).
+* **Đường viền bao ảnh tinh tế (Image Outlines):** Luôn thêm 1px outline phủ lên trên ảnh với độ mờ thấp để tạo chiều sâu đồng bộ. 
+  * *Màu viền:* Bắt buộc dùng màu đen tinh khiết `rgba(0, 0, 0, 0.1)` (Light mode) hoặc trắng tinh khiết `rgba(255, 255, 255, 0.1)` (Dark mode). Tuyệt đối không dùng các màu trung tính pha (như Slate, Zinc, Neutral) vì sẽ tạo vết bẩn màu xung quanh mép ảnh. Sử dụng `outline-offset: -1px` để viền nằm thụt vào trong và không ảnh hưởng layout.
+* **Độ co giãn khi bấm nút (Scale on Press):** Thêm hiệu ứng co giãn nhẹ `scale(0.96)` (hoặc tối thiểu `scale(0.95)`, không dùng giá trị nhỏ hơn vì sẽ bị phóng đại quá mức) ở trạng thái `active` khi người dùng click vào các nút bấm để tạo phản hồi xúc giác (tactile feedback). Cung cấp tùy chọn tắt (`static` prop) khi cần thiết.
+* **Tránh hiệu ứng xuất hiện khi tải trang (Skip Animation on Page Load):** Sử dụng thuộc tính `initial={false}` (đối với Framer Motion) để tắt hoạt họa xuất hiện đầu tiên của các phần tử mặc định khi tải trang lần đầu, chỉ chạy hoạt họa khi có sự thay đổi trạng thái sau đó.
+* **Không bao giờ dùng `transition: all` (Transition Specificity):** Luôn chỉ định rõ ràng các thuộc tính cần chuyển động (như `transition-property: scale, opacity`) thay vì dùng `all` để giúp trình duyệt tối ưu hóa phần cứng và tránh các chuyển động lỗi không mong muốn trên các thuộc tính khác.
+* **Sử dụng `will-change` tiết chế:** Chỉ dùng `will-change` cho các thuộc tính được hỗ trợ tăng tốc đồ họa bởi GPU (`transform`, `opacity`, `filter`, `clip-path`) và chỉ bật khi phát hiện có giật khung hình đầu tiên. Không lạm dụng để tránh tốn bộ nhớ RAM của thiết bị.
+* **Vùng chạm tối thiểu (Minimum Hit Area):** Đảm bảo tất cả phần tử tương tác có vùng bấm tối thiểu **40x40px** hoặc **44x44px**. Với phần tử hiển thị nhỏ (như checkbox 20px, nút đóng nhỏ), dùng pseudo-element (`::after` absolute) để mở rộng vùng bấm ảo mà không làm thay đổi layout. Hai vùng bấm của hai phần tử cạnh nhau tuyệt đối không được chồng lấp lên nhau.
+
 ---
 
 ## PHẦN 2: CÁC KIẾN THỨC NỀN TẢNG VỀ UX (UX FOUNDATION)
